@@ -10,15 +10,39 @@ spec:
     targetRevision: 1.20.2
     path: .
     helm:
-      parameters:
+      values: |
         # Install CRDs
-        - name: crds.enabled
-          value: "true"
+        crds:
+          enabled: true
+
         # DNS01 resolver configuration for ACME challenges
-        - name: dns01RecursiveNameservers
-          value: "1.1.1.1:53,1.0.0.1:53"
-        - name: dns01RecursiveNameserversOnly
-          value: "true"
+        dns01RecursiveNameservers: "1.1.1.1:53,1.0.0.1:53"
+        dns01RecursiveNameserversOnly: true
+
+        # AWS service account
+        extraEnv:
+          - name: AWS_ROLE_ARN
+            value: "arn:aws:iam::975050337257:role/cert-manager-route53"
+          - name: AWS_WEB_IDENTITY_TOKEN_FILE
+            value: "/var/run/secrets/aws-iam-token/token"
+
+        volumes:
+          - name: aws-iam-token
+            projected:
+              defaultMode: 420
+              sources:
+                - serviceAccountToken:
+                    audience: sts.amazonaws.com
+                    expirationSeconds: 86400
+                    path: token
+
+        volumeMounts:
+          - mountPath: /var/run/secrets/aws-iam-token
+            name: aws-iam-token
+            readOnly: true
+
+        securityContext:
+          fsGroup: 1001
   destination:
     server: https://kubernetes.default.svc
     namespace: cert-manager
