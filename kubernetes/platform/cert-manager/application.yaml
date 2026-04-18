@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: oci://quay.io/jetstack/charts/cert-manager
+    targetRevision: 1.20.2
+    path: .
+    helm:
+      parameters:
+        # Install CRDs
+        - name: crds.enabled
+          value: "true"
+        # DNS01 resolver configuration for ACME challenges
+        - name: dns01RecursiveNameservers
+          value: "1.1.1.1:53,1.0.0.1:53"
+        - name: dns01RecursiveNameserversOnly
+          value: "true"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
