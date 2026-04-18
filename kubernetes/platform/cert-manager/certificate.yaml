@@ -3,6 +3,8 @@ kind: Certificate
 metadata:
   name: test-de-winter-cert
   namespace: default
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   secretName: test-de-winter-tls
   issuerRef:

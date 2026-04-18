@@ -22,7 +22,7 @@ spec:
         # AWS service account
         extraEnv:
           - name: AWS_ROLE_ARN
-            value: "arn:aws:iam::975050337257:role/cert-manager-route53"
+            value: "arn:aws:iam::975050337257:role/oidc/cert-manager-route53"
           - name: AWS_WEB_IDENTITY_TOKEN_FILE
             value: "/var/run/secrets/aws-iam-token/token"
 
