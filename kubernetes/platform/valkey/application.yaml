@@ -23,7 +23,17 @@ spec:
             storageClass: local-path
             accessModes:
               - ReadWriteOnce
-              
+        
+        resources:
+          limits:
+            cpu: 200m
+            memory: 256Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+
+        # TODO OTEL
+        # Ref. https://github.com/valkey-io/valkey-helm/blob/main/valkey/values.yaml
         metrics:
           enabled: false
   destination:
