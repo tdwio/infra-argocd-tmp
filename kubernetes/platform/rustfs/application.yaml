@@ -33,6 +33,14 @@ spec:
           dataStorageSize: 16Gi
           logStorageSize: 1Gi
 
+        resources:
+          limits:
+            cpu: 200m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+
         # TODO OTEL
         # Ref. https://github.com/rustfs/rustfs/blob/main/helm/rustfs/values.yaml
         obs_endpoint:
