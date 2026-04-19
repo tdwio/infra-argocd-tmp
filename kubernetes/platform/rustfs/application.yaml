@@ -23,7 +23,7 @@ spec:
             enabled: false
 
         secret:
-          existingSecret: s3-credentials
+          existingSecret: rustfs-credentials
 
         ingress:
           enabled: false
@@ -47,7 +47,7 @@ spec:
           enabled: false
   destination:
     server: https://kubernetes.default.svc
-    namespace: s3
+    namespace: rustfs-system
   syncPolicy:
     automated:
       prune: true
