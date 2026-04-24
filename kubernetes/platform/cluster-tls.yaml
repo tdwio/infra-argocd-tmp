@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cluster-tls
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/tdwio/infra-argocd-tmp
+    targetRevision: HEAD
+    path: kubernetes/manifests/cluster-tls
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
