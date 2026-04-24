@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: init-db-script
+  namespace: postgres
+data:
+  init-db.sh: |
+    #!/bin/bash
+    set -e
+    echo "Initializing database $DATABASE…"
+    
+    # Create user
+    exists=$(psql -h postgres -U postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname='$USERNAME'")
+    if [ "$exists" != "1" ]; then
+      echo "Creating user $USERNAME…"
+      psql -h postgres -U postgres -c "CREATE USER \"$USERNAME\" WITH PASSWORD '$PASSWORD';"
+    else
+      echo "User $USERNAME already exists."
+    fi
+    
+    # Create DB
+    exists=$(psql -h postgres -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$DATABASE'")
+    if [ "$exists" != "1" ]; then
+      echo "Creating database $DATABASE…"
+      psql -h postgres -U postgres -c "CREATE DATABASE \"$DATABASE\" OWNER \"$USERNAME\";"
+      psql -h postgres -U postgres -d "$DATABASE" -c "GRANT ALL ON SCHEMA public TO \"$USERNAME\";"
+    else
+      echo "Database $DATABASE already exists."
+    fi
+    
+    echo "Database initialization complete."
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: init-db-harbor
+  namespace: postgres
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: init-db
+          image: postgres:18.3-alpine3.23
+          command: ["/bin/bash", "/scripts/init-db.sh"]
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: password
+            - name: DATABASE
+              value: "harbor"
+            - name: USERNAME
+              value: "harbor"
+            - name: PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: harbor-postgres-credentials
+                  key: password
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+      volumes:
+        - name: scripts
+          configMap:
+            name: init-db-script
+            defaultMode: 0755
