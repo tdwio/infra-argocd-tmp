@@ -1,0 +1,66 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: harbor
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://helm.goharbor.io
+    chart: harbor
+    targetRevision: 1.18.3
+    helm:
+      values: |
+        externalURL: http://harbor.internal
+        
+        expose:
+          type: clusterIP
+          tls:
+            enabled: false
+            
+        database:
+          type: external
+          external:
+            host: "postgres.postgres.svc.cluster.local"
+            port: "5432"
+            username: "harbor"
+            coreDatabase: "harbor"
+            existingSecret: "harbor-postgres-credentials"
+            sslmode: "disable"
+            
+        redis:
+          type: external
+          external:
+            addr: "valkey.valkey-system.svc.cluster.local:6379"
+            username: ""
+            password: ""
+            coreDatabaseIndex: "0"
+            jobserviceDatabaseIndex: "1"
+            registryDatabaseIndex: "2"
+            trivyAdapterIndex: "3"
+            
+        persistence:
+          imageChartStorage:
+            type: s3
+            disableredirect: true
+            s3:
+              region: us-east-1
+              bucket: registry
+              regionendpoint: http://rustfs-svc.s3.svc.cluster.local:9000
+              secure: false
+              existingSecret: harbor-s3-credentials
+              
+        trivy:
+          enabled: true
+          
+        # TODO OTEL
+        # Ref. https://goharbor.io/docs/2.2.0/administration/metrics/
+        metrics:
+          enabled: false
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: harbor
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
