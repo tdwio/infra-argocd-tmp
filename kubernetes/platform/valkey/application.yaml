@@ -18,11 +18,14 @@ spec:
           enabled: false
           # replicas: 2
           
-          persistence:
-            size: 1Gi
-            storageClass: local-path
-            accessModes:
-              - ReadWriteOnce
+          # NOTE
+          # Does not work without replicas
+          #
+          # persistence:
+          #   size: 1Gi
+          #   storageClass: local-path
+          #   accessModes:
+          #     - ReadWriteOnce
         
         resources:
           limits:
@@ -42,6 +45,6 @@ spec:
   syncPolicy:
     automated:
       prune: true
-      selfHeal: true
+      selfHeal: false
     syncOptions:
       - CreateNamespace=true
