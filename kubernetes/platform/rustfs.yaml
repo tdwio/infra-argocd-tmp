@@ -47,7 +47,7 @@ spec:
           enabled: false
   destination:
     server: https://kubernetes.default.svc
-    namespace: rustfs-system
+    namespace: s3
   syncPolicy:
     automated:
       prune: true

@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: init-s3-script
+  namespace: s3
+data:
+  init-s3.sh: |
+    #!/bin/sh
+    set -e
+    
+    echo "Connecting to RustFS API…"
+    rc alias set s3 http://rustfs-svc.s3.svc.cluster.local:9000 $ADMIN_ACCESS_KEY $ADMIN_SECRET_KEY
+
+    echo "Ensuring bucket '$TARGET_BUCKET' exists…"
+    if rc ls s3/"$TARGET_BUCKET" > /dev/null 2>&1; then
+      echo "Bucket $TARGET_BUCKET already exists."
+    else
+      echo "Creating bucket $TARGET_BUCKET…"
+      rc mb s3/"$TARGET_BUCKET"
+    fi
+    
+    echo "Ensuring user '$TARGET_ACCESS_KEY' exists…"
+    if rc admin user info s3/ "$TARGET_ACCESS_KEY" > /dev/null 2>&1; then
+      echo "User $TARGET_ACCESS_KEY already exists. Updating password…"
+    else
+      echo "Creating user $TARGET_ACCESS_KEY…"
+    fi
+    
+    rc admin user add s3/ "$TARGET_ACCESS_KEY" "$TARGET_SECRET_KEY"
+    rc admin policy attach s3/ readwrite --user "$TARGET_ACCESS_KEY"
+    
+    echo "S3 initialization complete!"
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: init-s3-harbor
+  namespace: s3
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: init-s3
+          # Updated to the official RustFS CLI Docker image provided
+          image: rustfs/rc:v0.1.12 
+          command: ["/bin/sh", "/scripts/init-s3.sh"]
+          env:
+            - name: ADMIN_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rustfs-credentials
+                  key: RUSTFS_ACCESS_KEY
+            - name: ADMIN_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rustfs-credentials
+                  key: RUSTFS_SECRET_KEY
+            - name: TARGET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: harbor-s3-credentials
+                  key: REGISTRY_STORAGE_S3_ACCESSKEY
+            - name: TARGET_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: harbor-s3-credentials
+                  key: REGISTRY_STORAGE_S3_SECRETKEY
+            - name: TARGET_BUCKET
+              value: "registry"
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+      volumes:
+        - name: scripts
+          configMap:
+            name: init-s3-script
+            defaultMode: 0755
